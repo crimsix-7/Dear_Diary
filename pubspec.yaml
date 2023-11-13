@@ -1,0 +1,26 @@
+name: diary_project
+description: A personal diary Flutter application.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.1.4 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  hive: ^2.0.4
+  path_provider: ^2.0.2
+  hive_flutter: ^1.1.0
+  intl: ^0.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  build_runner: ^2.1.2
+  hive_generator: ^1.1.0
+  analyzer: ^4.7.0
+
+flutter:
+  uses-material-design: true
