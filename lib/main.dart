@@ -1,26 +1,19 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'controller/diary_controller.dart';
-import 'view/entry_view.dart';
-import 'view/viewing_logs.dart';
-import 'model/diary_entry_model.dart';
+import 'view/LoginView.dart';
+import 'view/SignUpView.dart';
+import 'view/ForgotPasswordView.dart';
+import 'view/diary_list_view.dart';
+import 'view/add_edit_diary_entry_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Hive initialization
-  final appDocumentDir = await getApplicationDocumentsDirectory();
-  Hive.init(appDocumentDir.path);
-  Hive.registerAdapter(DiaryEntryAdapter());
-
-  // clean entries (rerun app)
-  //final diaryBox = await Hive.openBox<DiaryEntry>('diary_entries');
-  //await diaryBox.clear();
-  //await diaryBox.close();
+  await Firebase.initializeApp();
   runApp(DiaryApp());
 }
 
@@ -33,9 +26,31 @@ class DiaryApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: DiaryLogWrapper(), // Start with the DiaryLogView
+      initialRoute: '/',
       routes: {
+        '/': (context) => AuthenticationWrapper(),
+        '/signUp': (context) => SignUpView(),
+        '/forgotPassword': (context) => ForgotPasswordView(),
+        '/diary': (context) => DiaryLogWrapper(),
         '/addEntry': (context) => DiaryEntryWrapper(),
+      },
+    );
+  }
+}
+
+class AuthenticationWrapper extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        } else if (snapshot.hasData) {
+          return DiaryLogWrapper();
+        } else {
+          return LoginView();
+        }
       },
     );
   }
@@ -47,52 +62,25 @@ class DiaryLogWrapper extends StatefulWidget {
 }
 
 class _DiaryLogWrapperState extends State<DiaryLogWrapper> {
-  DiaryController? controller;
+  late DiaryController controller;
 
   @override
   void initState() {
     super.initState();
-    _initializeController();
-  }
-
-  _initializeController() async {
-    controller = await DiaryController.create();
-    setState(() {});
+    controller = DiaryController();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (controller == null) {
-      return CircularProgressIndicator(); // Or some loading widget
-    }
-    return DiaryLogView(controller: controller!);
+    return DiaryLogView(controller: controller);
   }
 }
 
-class DiaryEntryWrapper extends StatefulWidget {
-  @override
-  _DiaryEntryWrapperState createState() => _DiaryEntryWrapperState();
-}
-
-class _DiaryEntryWrapperState extends State<DiaryEntryWrapper> {
-  DiaryController? controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeController();
-  }
-
-  _initializeController() async {
-    controller = await DiaryController.create();
-    setState(() {});
-  }
+class DiaryEntryWrapper extends StatelessWidget {
+  final DiaryController controller = DiaryController();
 
   @override
   Widget build(BuildContext context) {
-    if (controller == null) {
-      return CircularProgressIndicator(); // Or some loading widget
-    }
-    return DiaryEntryView(controller: controller!);
+    return AddEditDiaryEntryView(controller: controller);
   }
 }

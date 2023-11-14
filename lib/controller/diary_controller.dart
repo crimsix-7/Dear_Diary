@@ -1,62 +1,57 @@
-import 'package:hive/hive.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/diary_entry_model.dart';
 
 class DiaryController {
-  static const String _boxName = 'diary_entries';
-  late final Box<DiaryEntry> _diaryBox;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Make the default constructor private
-  DiaryController._();
-
-  // Factory constructor to ensure initialization
-  static Future<DiaryController> create() async {
-    final instance = DiaryController._();
-    await instance._initHive();
-    return instance;
+  // User Authentication
+  Future<UserCredential?> signUp(String email, String password) async {
+    return await _auth.createUserWithEmailAndPassword(email: email, password: password);
   }
 
-  Future<void> _initHive() async {
-    _diaryBox = await Hive.openBox<DiaryEntry>(_boxName);
+  Future<UserCredential?> signIn(String email, String password) async {
+    return await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  Future<bool> addEntry(DiaryEntry entry) async {
-    // Check if the date already exists
-    var existingEntries = _diaryBox.values.where((e) => e.date.isAtSameMomentAs(entry.date)).toList();
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 
-    if (existingEntries.length >= 1) {
-      return false;
+  // Diary Entry Management
+  Future<bool> addDiaryEntry(DiaryEntry entry) async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).collection('diary_entries').add(entry.toMap());
+      return true;
     }
-
-    await _diaryBox.add(entry);  // Using .add() which auto-generates a key.
-    return true;
+    return false;
   }
 
-  Future<void> removeEntry(DateTime date) async {
-    final keysToDelete = _diaryBox.keys.where((key) {
-      final entry = _diaryBox.get(key);
-      return entry != null && entry.date.isAtSameMomentAs(date);
-    }).toList();
-
-    for (var key in keysToDelete) {
-      await _diaryBox.delete(key);
-    }
+Future<List<DiaryEntry>> getDiaryEntries() async {
+  User? user = _auth.currentUser;
+  if (user != null) {
+    var snapshot = await _firestore.collection('users').doc(user.uid).collection('diary_entries').get();
+    return snapshot.docs.map((doc) => DiaryEntry.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
   }
+  return [];
+}
 
-  Future<List<DiaryEntry>> getAllEntries() async {
-    return _diaryBox.values.toList()
-      ..sort((a, b) => b.date.compareTo(a.date)); // Reverse Chronological order
-  }
 
-  Future<DiaryEntry?> getEntry(DateTime date) async {
-    try {
-      return _diaryBox.values.firstWhere((e) => e.date.isAtSameMomentAs(date));
-    } catch (e) {
-      return null;
+  Future<void> updateDiaryEntry(String docId, DiaryEntry updatedEntry) async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).collection('diary_entries').doc(docId).update(updatedEntry.toMap());
     }
   }
 
-
-  void dispose() {
-    _diaryBox.close();
+  Future<void> deleteDiaryEntry(String docId) async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).collection('diary_entries').doc(docId).delete();
+    }
   }
+
+  // Additional methods as needed ...
 }
