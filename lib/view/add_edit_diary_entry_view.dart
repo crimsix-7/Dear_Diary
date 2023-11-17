@@ -21,15 +21,9 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingEntry != null) {
-      _descriptionController = TextEditingController(text: widget.existingEntry!.description);
-      _rating = widget.existingEntry!.rating;
-      _selectedDate = widget.existingEntry!.date;
-    } else {
-      _descriptionController = TextEditingController();
-      _rating = 3; // Default rating
-      _selectedDate = DateTime.now();
-    }
+    _descriptionController = TextEditingController(text: widget.existingEntry?.description ?? '');
+    _rating = widget.existingEntry?.rating ?? 3; // Default rating
+    _selectedDate = widget.existingEntry?.date ?? DateTime.now();
   }
 
   @override
@@ -55,7 +49,7 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
   void _saveEntry() {
     if (_descriptionController.text.length <= 140) {
       DiaryEntry entry = DiaryEntry(
-        id: widget.existingEntry?.id ?? '', // Use existing ID if editing, else empty (will be assigned in Firestore)
+        entryId: widget.existingEntry?.entryId ?? '', // Use existing ID if editing, else empty (will be assigned in Firestore)
         date: _selectedDate,
         description: _descriptionController.text,
         rating: _rating,
@@ -63,12 +57,18 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
       if (widget.existingEntry == null) {
         widget.controller.addDiaryEntry(entry);
       } else {
-        widget.controller.updateDiaryEntry(widget.existingEntry!.id, entry);
+        widget.controller.updateDiaryEntry(widget.existingEntry!.entryId, entry);
       }
       Navigator.pop(context, true); // Return to previous screen after save
     } else {
-      // Handle error for description length
+      _showSnackbar('Description cannot exceed 140 characters');
     }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
