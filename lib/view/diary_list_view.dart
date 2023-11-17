@@ -17,7 +17,9 @@ class DiaryLogView extends StatefulWidget {
 
 class _DiaryLogViewState extends State<DiaryLogView> {
   Future<List<DiaryEntry>>? entriesFuture;
+  List<DiaryEntry> filteredEntries = []; // Added for search functionality
   String? userId;
+  String searchQuery = ""; // Search query string
 
   @override
   void initState() {
@@ -29,6 +31,27 @@ class _DiaryLogViewState extends State<DiaryLogView> {
   void _fetchEntries() {
     if (userId != null) {
       entriesFuture = widget.controller.getDiaryEntries();
+      entriesFuture!.then((entries) {
+        setState(() {
+          filteredEntries = entries; // Initialize filteredEntries with all entries
+        });
+      });
+    }
+  }
+
+  void _filterEntries(String query) async {
+    if (query.isEmpty) {
+      var entries = await entriesFuture;
+      setState(() {
+        filteredEntries = entries ?? []; // Show all entries if query is empty
+      });
+    } else {
+      var entries = await entriesFuture;
+      setState(() {
+        filteredEntries = entries
+            ?.where((entry) => entry.description.toLowerCase().contains(query.toLowerCase()))
+            .toList() ?? []; // Filter entries based on query
+      });
     }
   }
 
@@ -43,7 +66,6 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       itemBuilder: (context, index) => _buildDiaryEntryItem(entries[index]),
     );
   }
-
   Widget _buildDiaryEntryItem(DiaryEntry entry) {
     return Container(
       margin: const EdgeInsets.all(8.0),
@@ -108,13 +130,26 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       setState(_fetchEntries);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Diary Log'),
-        actions: <Widget>[IconButton(icon: const Icon(Icons.exit_to_app), onPressed: _logout, tooltip: 'Logout')],
+        title: TextField(
+          onChanged: (value) {
+            setState(() {
+              searchQuery = value;
+              _filterEntries(searchQuery); // Update search query and filter entries
+            });
+          },
+          decoration: InputDecoration(
+            hintText: "Search entries...",
+            border: InputBorder.none,
+            icon: Icon(Icons.search),
+          ),
+        ),
+        actions: <Widget>[
+          IconButton(icon: const Icon(Icons.exit_to_app), onPressed: _logout, tooltip: 'Logout')
+        ],
       ),
       body: FutureBuilder<List<DiaryEntry>>(
         future: entriesFuture,
@@ -123,10 +158,10 @@ class _DiaryLogViewState extends State<DiaryLogView> {
             return const CircularProgressIndicator();
           } else if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
-          } else if (!snapshot.hasData | snapshot.data!.isEmpty) {
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No entries found.', style: TextStyle(fontSize: 20.0)));
           } else {
-            return _buildDiaryEntryList(snapshot.data!);
+            return _buildDiaryEntryList(searchQuery.isEmpty ? snapshot.data! : filteredEntries); // Use filtered entries if search query is not empty
           }
         },
       ),

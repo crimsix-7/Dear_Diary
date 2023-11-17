@@ -33,10 +33,11 @@ class DiaryController {
     User? user = _auth.currentUser;
     if (user != null) {
       var snapshot = await _firestore.collection('users/${user.uid}/diary_entries').get();
-      return snapshot.docs.map((doc) => DiaryEntry.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs.map((doc) => DiaryEntry.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
     }
     return [];
   }
+
 
   Future<void> updateDiaryEntry(String docId, DiaryEntry updatedEntry) async {
     User? user = _auth.currentUser;

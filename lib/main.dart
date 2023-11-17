@@ -1,64 +1,71 @@
-// lib/main.dart
-
-// Main
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// Controllers
 import 'controller/diary_controller.dart';
-
-// Views
 import 'view/add_edit_diary_entry_view.dart';
 import 'view/diary_list_view.dart';
 import 'view/LoginView.dart';
-import 'view/ForgotPasswordView.dart'; // Make sure this import path is correct
-import 'view/SignUpView.dart'; // Make sure this import path is correct
-
-// FireBase
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // This should point to your generated Firebase options file
-import 'package:firebase_auth/firebase_auth.dart';
+import 'view/ForgotPasswordView.dart';
+import 'view/SignUpView.dart';
 
 final FirebaseAuth auth = FirebaseAuth.instance;
-Future<void> main() async {
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeNotifier(),
+      child: DiaryApp(),
+    ),
   );
+}
 
-  // Uncomment the following line if you want to sign out the user every time the app starts
-  // await FirebaseAuth.instance.signOut();
+class ThemeNotifier with ChangeNotifier {
+  ThemeData _currentTheme = ThemeData.light();
 
-  runApp(DiaryApp());
+  // Added the isDarkMode getter
+  bool get isDarkMode => _currentTheme.brightness == Brightness.dark;
+
+  ThemeData get currentTheme => _currentTheme;
+
+  void toggleTheme() {
+    _currentTheme = isDarkMode ? ThemeData.light() : ThemeData.dark();
+    notifyListeners();
+  }
 }
 
 class DiaryApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Dear Diary',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
-          } else if (snapshot.hasData) {
-            return DiaryLogWrapper(); // User is signed in
-          } else {
-            return SignInView(); // User is not signed in, show SignInView
-          }
-        },
-      ),
-      routes: {
-        '/addEntry': (context) => DiaryEntryWrapper(),
-        '/forgotPassword': (context) => PasswordResetView(), // Added route for ForgotPasswordView
-        '/signUp': (context) => SignUpView(), // Added route for SignUpView
-        // Add other routes as necessary
+    return Consumer<ThemeNotifier>(
+      builder: (context, themeNotifier, child) {
+        return MaterialApp(
+          title: 'Dear Diary',
+          theme: themeNotifier.currentTheme,
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator();
+              } else if (snapshot.hasData) {
+                return DiaryLogWrapper();
+              } else {
+                return SignInView();
+              }
+            },
+          ),
+          routes: {
+            '/addEntry': (context) => DiaryEntryWrapper(),
+            '/forgotPassword': (context) => PasswordResetView(),
+            '/signUp': (context) => SignUpView(),
+            // Add other routes as necessary
+          },
+        );
       },
     );
   }
@@ -75,12 +82,10 @@ class _DiaryLogWrapperState extends State<DiaryLogWrapper> {
   @override
   void initState() {
     super.initState();
-    // Firebase Firestore initialization or other setup if necessary
   }
 
   @override
   Widget build(BuildContext context) {
-    // Firebase Firestore related UI code if necessary
     return DiaryLogView(controller: controller);
   }
 }
@@ -96,12 +101,10 @@ class _DiaryEntryWrapperState extends State<DiaryEntryWrapper> {
   @override
   void initState() {
     super.initState();
-    // Firebase Firestore initialization or other setup if necessary
   }
 
   @override
   Widget build(BuildContext context) {
-    // Firebase Firestore related UI code if necessary
     return AddEditDiaryEntryView(controller: controller);
   }
 }
