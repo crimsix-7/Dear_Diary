@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import for DateFormat
+import 'package:image_picker/image_picker.dart'; // Import for Image Picker
 import '../model/diary_entry_model.dart';
 import '../controller/diary_controller.dart';
 
@@ -17,6 +18,7 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
   late TextEditingController _descriptionController;
   late int _rating;
   late DateTime _selectedDate;
+  List<String> _imageUrls = []; // List to store image URLs
 
   @override
   void initState() {
@@ -24,6 +26,7 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
     _descriptionController = TextEditingController(text: widget.existingEntry?.description ?? '');
     _rating = widget.existingEntry?.rating ?? 3; // Default rating
     _selectedDate = widget.existingEntry?.date ?? DateTime.now();
+    _imageUrls = widget.existingEntry?.imageUrls ?? []; // Initialize with existing images if any
   }
 
   @override
@@ -46,13 +49,27 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      // Here you would typically upload the image to Firebase Storage and get the URL
+      // For demonstration, adding a placeholder URL
+      setState(() {
+        _imageUrls.add('url_of_uploaded_image');
+      });
+    }
+  }
+
   void _saveEntry() {
     if (_descriptionController.text.length <= 140) {
       DiaryEntry entry = DiaryEntry(
-        entryId: widget.existingEntry?.entryId ?? '', // Use existing ID if editing, else empty (will be assigned in Firestore)
+        entryId: widget.existingEntry?.entryId ?? '',
         date: _selectedDate,
         description: _descriptionController.text,
         rating: _rating,
+        imageUrls: _imageUrls, // Include image URLs in the diary entry
       );
       if (widget.existingEntry == null) {
         widget.controller.addDiaryEntry(entry);
@@ -69,6 +86,16 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Widget _buildImageList() {
+    return _imageUrls.isEmpty
+        ? Text('No images added')
+        : Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: _imageUrls.map((url) => Image.network(url, width: 100, height: 100)).toList(),
+          );
   }
 
   @override
@@ -107,6 +134,11 @@ class _AddEditDiaryEntryViewState extends State<AddEditDiaryEntryView> {
                 );
               }).toList(),
             ),
+            ElevatedButton(
+              onPressed: _pickImage,
+              child: Text('Add Image'),
+            ),
+            _buildImageList(), // Display the list of images
             ElevatedButton(
               onPressed: _saveEntry,
               child: Text('Save'),

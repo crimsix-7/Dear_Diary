@@ -66,6 +66,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       itemBuilder: (context, index) => _buildDiaryEntryItem(entries[index]),
     );
   }
+
   Widget _buildDiaryEntryItem(DiaryEntry entry) {
     return Container(
       margin: const EdgeInsets.all(8.0),
@@ -74,13 +75,34 @@ class _DiaryLogViewState extends State<DiaryLogView> {
         border: Border.all(color: Colors.black),
         borderRadius: BorderRadius.circular(10.0),
       ),
-      child: ListTile(
-        title: Text(entry.description),
-        subtitle: Text(DateFormat('yyyy-MM-dd').format(entry.date)),
-        trailing: _buildEntryActions(entry),
-        onLongPress: () => _editEntry(entry),
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(entry.description),
+            subtitle: Text(DateFormat('yyyy-MM-dd').format(entry.date)),
+            trailing: _buildEntryActions(entry),
+            onLongPress: () => _editEntry(entry),
+          ),
+          _buildImagePreview(entry),
+        ],
       ),
     );
+  }
+
+  Widget _buildImagePreview(DiaryEntry entry) {
+    return entry.imageUrls.isEmpty
+        ? SizedBox.shrink() // No images, don't display anything
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: entry.imageUrls
+                  .map((url) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: Image.network(url, width: 100, height: 100),
+                      ))
+                  .toList(),
+            ),
+          );
   }
 
   Widget _buildEntryActions(DiaryEntry entry) {
@@ -130,6 +152,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       setState(_fetchEntries);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

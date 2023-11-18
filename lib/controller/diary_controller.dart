@@ -1,10 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart'; // Import for Firebase Storage
 import '../model/diary_entry_model.dart';
+import 'dart:io'; // For File class
+import 'package:path/path.dart'; // For basename method
+
 
 class DiaryController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance; // Instance for Firebase Storage
 
   // User Authentication
   Future<UserCredential?> signUp(String email, String password) async {
@@ -38,7 +43,6 @@ class DiaryController {
     return [];
   }
 
-
   Future<void> updateDiaryEntry(String docId, DiaryEntry updatedEntry) async {
     User? user = _auth.currentUser;
     if (user != null) {
@@ -53,4 +57,21 @@ class DiaryController {
     }
   }
 
+  // Image Management
+  Future<String?> uploadImage(String imagePath, String userId) async {
+    try {
+      File imageFile = File(imagePath); // Local file path
+      String fileName = basename(imagePath); // Extracting file name
+      String destination = 'images/$userId/$fileName';
+
+      // Upload task
+      TaskSnapshot snapshot = await _storage.ref(destination).putFile(imageFile);
+      if (snapshot.state == TaskState.success) {
+        return await snapshot.ref.getDownloadURL(); // Get image URL after upload
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+    }
+    return null;
+  }
 }
